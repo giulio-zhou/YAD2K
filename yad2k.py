@@ -238,7 +238,8 @@ def _main(args):
 
         elif section.startswith('region'):
             with open('{}_anchors.txt'.format(output_root), 'w') as f:
-                print(cfg_parser[section]['anchors'], file=f)
+                # print(cfg_parser[section]['anchors'], file=f)
+                f.write(str(cfg_parser[section]['anchors']))
 
         elif (section.startswith('net') or section.startswith('cost') or
               section.startswith('softmax')):

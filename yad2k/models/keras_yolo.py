@@ -393,10 +393,10 @@ def yolo_eval_batch(yolo_outputs,
         all_scores.append(scores)
         all_classes.append(classes)
         all_frames.append(frames)
-    concat_boxes = tf.concat(all_boxes, 0)
-    concat_scores = tf.concat(all_scores, 0)
-    concat_classes = tf.concat(all_classes, 0)
-    concat_frames = tf.concat(all_frames, 0)
+    concat_boxes = tf.concat(all_boxes, 0, name='output_boxes')
+    concat_scores = tf.concat(all_scores, 0, name='output_scores')
+    concat_classes = tf.concat(all_classes, 0, name='output_classes')
+    concat_frames = tf.concat(all_frames, 0, name='output_frames')
     return concat_boxes, concat_scores, concat_classes, concat_frames
 
 def preprocess_true_boxes(true_boxes, anchors, image_size):

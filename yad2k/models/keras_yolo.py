@@ -378,7 +378,7 @@ def yolo_eval_batch(yolo_outputs,
         return boxes, scores, classes
 
     box_xy, box_wh, box_confidence, box_class_probs = yolo_outputs
-    all_boxes, all_scores, all_classes = [], [], []
+    all_boxes, all_scores, all_classes, all_frames = [], [], [], []
     for i in range(batch_size):
         slice_idx, size_idx = [i, 0, 0, 0, 0], [1, -1, -1, -1, -1]
         box_xy_slice = tf.slice(box_xy, slice_idx, size_idx)
@@ -388,13 +388,16 @@ def yolo_eval_batch(yolo_outputs,
         boxes, scores, classes = \
             yolo_eval_single(box_xy_slice, box_wh_slice,
                              box_confidence_slice, box_class_probs_slice)
+        frames = tf.fill([tf.shape(boxes)[0]], i)
         all_boxes.append(boxes)
         all_scores.append(scores)
         all_classes.append(classes)
+        all_frames.append(frames)
     concat_boxes = tf.concat(all_boxes, 0)
     concat_scores = tf.concat(all_scores, 0)
     concat_classes = tf.concat(all_classes, 0)
-    return concat_boxes, concat_scores, concat_classes
+    concat_frames = tf.concat(all_frames, 0)
+    return concat_boxes, concat_scores, concat_classes, concat_frames
 
 def preprocess_true_boxes(true_boxes, anchors, image_size):
     """Find detector in YOLO where ground truth box should appear.

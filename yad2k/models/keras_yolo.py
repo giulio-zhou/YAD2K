@@ -348,6 +348,53 @@ def yolo_eval(yolo_outputs,
     classes = K.gather(classes, nms_index)
     return boxes, scores, classes
 
+def yolo_eval_batch(yolo_outputs,
+                    image_shape,
+                    max_boxes=10,
+                    score_threshold=.6,
+                    iou_threshold=.5,
+                    batch_size=1):
+    """Evaluate YOLO model on given input batch and return filtered boxes."""
+    def yolo_eval_single(box_xy, box_wh, box_confidence, box_class_probs):
+        boxes = yolo_boxes_to_corners(box_xy, box_wh)
+        boxes, scores, classes = yolo_filter_boxes(
+            boxes, box_confidence, box_class_probs, threshold=score_threshold)
+
+        # Scale boxes back to original image shape.
+        height = image_shape[0]
+        width = image_shape[1]
+        image_dims = K.stack([height, width, height, width])
+        image_dims = K.reshape(image_dims, [1, 4])
+        boxes = boxes * image_dims
+
+        # TODO: Something must be done about this ugly hack!
+        max_boxes_tensor = K.variable(max_boxes, dtype='int32')
+        K.get_session().run(tf.variables_initializer([max_boxes_tensor]))
+        nms_index = tf.image.non_max_suppression(
+            boxes, scores, max_boxes_tensor, iou_threshold=iou_threshold)
+        boxes = K.gather(boxes, nms_index)
+        scores = K.gather(scores, nms_index)
+        classes = K.gather(classes, nms_index)
+        return boxes, scores, classes
+
+    box_xy, box_wh, box_confidence, box_class_probs = yolo_outputs
+    all_boxes, all_scores, all_classes = [], [], []
+    for i in range(batch_size):
+        slice_idx, size_idx = [i, 0, 0, 0, 0], [1, -1, -1, -1, -1]
+        box_xy_slice = tf.slice(box_xy, slice_idx, size_idx)
+        box_wh_slice = tf.slice(box_wh, slice_idx, size_idx)
+        box_confidence_slice = tf.slice(box_confidence, slice_idx, size_idx)
+        box_class_probs_slice = tf.slice(box_class_probs, slice_idx, size_idx)
+        boxes, scores, classes = \
+            yolo_eval_single(box_xy_slice, box_wh_slice,
+                             box_confidence_slice, box_class_probs_slice)
+        all_boxes.append(boxes)
+        all_scores.append(scores)
+        all_classes.append(classes)
+    concat_boxes = tf.concat(all_boxes, 0)
+    concat_scores = tf.concat(all_scores, 0)
+    concat_classes = tf.concat(all_classes, 0)
+    return concat_boxes, concat_scores, concat_classes
 
 def preprocess_true_boxes(true_boxes, anchors, image_size):
     """Find detector in YOLO where ground truth box should appear.

@@ -97,6 +97,7 @@ def yolo_head(feats, anchors, num_classes):
 
     # Dynamic implementation of conv dims for fully convolutional model.
     conv_dims = K.shape(feats)[1:3]  # assuming channels last
+    conv_dims = tf.reverse(conv_dims, [-1])
     # In YOLO the height index is the inner most iteration.
     conv_height_index = K.arange(0, stop=conv_dims[0])
     conv_width_index = K.arange(0, stop=conv_dims[1])
